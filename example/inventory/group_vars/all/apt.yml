@@ -1,3 +1,4 @@
+# Optional override for base packages installed by the role
 apt_default_packages:
   - acl
   - aptitude
@@ -11,7 +12,7 @@ apt_default_packages:
   - ncdu
   - net-tools
   - parted
-  - psmisc # for killall
+  - psmisc
   - python3
   - python3-apt
   - python3-dev
@@ -22,3 +23,4 @@ apt_default_packages:
   - telnet
   - unattended-upgrades
   - vim
+  - htop
