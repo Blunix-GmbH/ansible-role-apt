@@ -22,3 +22,10 @@ apt_default_packages:
   - telnet
   - unattended-upgrades
   - vim
+
+# Automatically install apt version upgrades
+apt_unattended_apt_version_upgrades: True
+# Automatically reboot for kernel upgrades
+apt_unattended_reboot: True
+# Time for unattended reboot
+apt_unattended_reboot_time: "01:00"

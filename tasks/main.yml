@@ -32,7 +32,7 @@
     group: root
     mode: 0644
   notify: reload systemd daemon
-    
+
 - name: override systemd apt-daily-upgrade to run hourly
   copy:
     dest: /etc/systemd/system/apt-daily-upgrade.timer.d/override.conf
@@ -45,12 +45,32 @@
     group: root
     mode: 0644
   notify: reload systemd daemon
-    
 
 - name: install default packages
   apt:
     name: "{{ apt_default_packages }}"
     state: present
+
+- name: "configure automatic installation of version upgrades and automatic reboots at {{ apt_unattended_reboot_time }}"
+  copy:
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    owner: root
+    group: root
+    mode: 0644
+    content: |
+      Unattended-Upgrade::Allowed-Origins {
+        "${distro_id}:${distro_codename}";
+        "${distro_id}:${distro_codename}-security";
+      };
+      Unattended-Upgrade::Origins-Pattern {
+        "origin=${distro_id},archive=${distro_codename}-security,label=Debian-Security";
+      {% if apt_unattended_apt_version_upgrades %}
+        "origin=${distro_id},archive=${distro_codename},label=Debian";
+      {% endif %}
+      };
+      Unattended-Upgrade::Automatic-Reboot "{{ 'true' if apt_unattended_reboot else 'false' }}";
+      Unattended-Upgrade::Automatic-Reboot-Time "{{ apt_unattended_reboot_time }}";
+  notify: reload systemd daemon
 
 - name: configure default package haveged
   copy:
