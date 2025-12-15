@@ -1,11 +1,3 @@
-- name: setup /usr/local/sbin/apt-get
-  template:
-    src: templates/usr/local/sbin/apt-get.sh.j2
-    dest: /usr/local/sbin/apt-get
-    owner: root
-    group: root
-    mode: 0750
-
 - name: affirm debconf unattended-upgrades/enable_auto_updates
   debconf:
     name: unattended-upgrades
@@ -14,8 +6,7 @@
     value: "true"
 
 
-# set systemd apt-daily-upgrade.timer to run every four hours
-# every four hours is enough, as mirrors update every four hours: https://www.debian.org/mirror/ftpmirror#when
+# set systemd apt-daily and apt-daily-upgrade timers to run hourly (upgrade offset by 15m)
 # Doc: https://wiki.debian.org/UnattendedUpgrades#Modifying_download_and_upgrade_schedules_.28on_systemd.29
 - name: create directories for systemd apt-daily and apt-daily-upgrade overrides
   file:
@@ -30,42 +21,56 @@
   loop_control:
     loop_var: apt_daily_upgrade_override_directory
 
-- name: override systemd apt-daily
+- name: override systemd apt-daily to run hourly
   copy:
     dest: /etc/systemd/system/apt-daily.timer.d/override.conf
     content: |
       [Timer]
-      OnCalendar=*-*-* 4:00:00
-      OnCalendar=*-*-* 10:00:00
-      OnCalendar=*-*-* 16:00:00
-      OnCalendar=*-*-* 22:00:00
+      OnCalendar=hourly
       RandomizedDelaySec=0
     owner: root
     group: root
     mode: 0644
   notify: reload systemd daemon
-    
-- name: override systemd apt-daily-upgrade
+
+- name: override systemd apt-daily-upgrade to run hourly
   copy:
     dest: /etc/systemd/system/apt-daily-upgrade.timer.d/override.conf
     content: |
       [Timer]
       OnCalendar=
-      OnCalendar=*-*-* 4:15:00
-      OnCalendar=*-*-* 10:15:00
-      OnCalendar=*-*-* 16:15:00
-      OnCalendar=*-*-* 22:15:00
+      OnCalendar=*-*-* *:15:00
       RandomizedDelaySec=0
     owner: root
     group: root
     mode: 0644
   notify: reload systemd daemon
-    
 
 - name: install default packages
   apt:
     name: "{{ apt_default_packages }}"
     state: present
+
+- name: "configure automatic installation of version upgrades and automatic reboots at {{ apt_unattended_reboot_time }}"
+  copy:
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    owner: root
+    group: root
+    mode: 0644
+    content: |
+      Unattended-Upgrade::Allowed-Origins {
+        "${distro_id}:${distro_codename}";
+        "${distro_id}:${distro_codename}-security";
+      };
+      Unattended-Upgrade::Origins-Pattern {
+        "origin=${distro_id},archive=${distro_codename}-security,label=Debian-Security";
+      {% if apt_unattended_apt_version_upgrades %}
+        "origin=${distro_id},archive=${distro_codename},label=Debian";
+      {% endif %}
+      };
+      Unattended-Upgrade::Automatic-Reboot "{{ 'true' if apt_unattended_reboot else 'false' }}";
+      Unattended-Upgrade::Automatic-Reboot-Time "{{ apt_unattended_reboot_time }}";
+  notify: reload systemd daemon
 
 - name: configure default package haveged
   copy:
@@ -79,4 +84,4 @@
 
 - name: run apt-get autoremove
   apt:
-    autoremove: yes
+    autoremove: True

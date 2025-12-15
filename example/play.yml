@@ -1,0 +1,5 @@
+- name: configure apt
+  hosts: all
+
+  roles:
+    - role: ansible-role-apt

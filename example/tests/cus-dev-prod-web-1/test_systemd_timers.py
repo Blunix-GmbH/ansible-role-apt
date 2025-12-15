@@ -2,8 +2,8 @@ import os
 import pytest
 import testinfra.utils.ansible_runner
 
-testinfra_hosts = testinfra.utils.ansible_runner.AnsibleRunner(
-    os.environ['MOLECULE_INVENTORY_FILE']).get_hosts('all')
+inv = os.environ.get("MOLECULE_INVENTORY_FILE", "inventory/hosts")
+testinfra_hosts = testinfra.utils.ansible_runner.AnsibleRunner(inv).get_hosts('all')
 
 
 @pytest.mark.parametrize('svc', [
